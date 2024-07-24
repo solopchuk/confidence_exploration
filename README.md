@@ -1,1 +1,1 @@
-# confidence_exploration
+This repository contains code and data for the preprint 'Multifaceted confidence in exploratory choice. Solopchuk O., Dayan P. 24', hosted at https://www.biorxiv.org/content/10.1101/2024.05.23.595493v1. The code reproduces all analysis and figures of the paper.
