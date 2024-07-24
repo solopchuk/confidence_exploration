@@ -168,7 +168,7 @@ if os.path.isfile(fname):
 if experiment2:
     fname = 'parameters_confidence_with_bounds_exp2.npz'
 else:
-    fname = 'parameters_confidence_with_bounds.npz'
+    fname = 'parameters_confidence_with_bounds_exp1.npz'
 if os.path.isfile(fname):
     data = np.load(fname)
     all_params_immed_H10_with_bounds = data['immed_H10']
