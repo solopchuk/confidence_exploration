@@ -21,7 +21,7 @@ from sklearn.feature_selection import SequentialFeatureSelector
 from scipy.stats import linregress
 from sklearn.linear_model import LogisticRegression
 from sklearn.linear_model import LinearRegression
-from functions_confidence import *
+from supporting_functions import *
 import os.path
 default_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
