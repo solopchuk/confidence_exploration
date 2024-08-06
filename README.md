@@ -9,13 +9,9 @@ Our choices are typically accompanied by a feeling of confidence - an internal e
 
 ## Installation
 
-In order to install the code, do the following steps:
+In order to install the code, either clone the repository, or download the zip file. Then do the following:
 ```sh
-# Clone the repository
-git clone https://github.com/solopchuk/confidence_exploration.git # using http, or
-git clone git@github.com:solopchuk/confidence_exploration.git # using ssh
-
-# change directory
+# change into directory
 cd confidence_exploration
 
 # create and activate a virtual environment
