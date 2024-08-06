@@ -1,37 +1,22 @@
 # %% imports
-import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
-from scipy.special import logit
-from scipy.special import expit
-from scipy.stats import f_oneway
-from scipy.optimize import brute
-from scipy.optimize import minimize
-from scipy.stats import pearsonr
-from scipy.stats import ttest_1samp
-from pingouin import corr
-from pingouin import power_ttest
-from pingouin import bayesfactor_ttest, ttest
-import statsmodels.api as sm
-from math import log
-from sklearn.metrics import mean_squared_error
-from numpy.polynomial.polynomial import polyfit
-from sklearn.metrics import mean_squared_error
-from sklearn.feature_selection import SequentialFeatureSelector
-from scipy.stats import linregress
-from sklearn.linear_model import LogisticRegression
-from sklearn.linear_model import LinearRegression
-from supporting_functions import *
 import os.path
+
+import matplotlib.pyplot as plt
+import numpy as np
+from pingouin import corr, ttest
+from scipy.stats import pearsonr
+
+from supporting_functions import *
+
 default_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
 # %% data loading
 experiment2 = 0 # if 0 - exp1, full confidence scale, else - exp2, 0 to 50
 
 if experiment2:
-    fname = 'data_exp2.npy'
+    fname = 'data/data_exp2.npy'
 else:
-    fname = 'data_exp1.npy'
+    fname = 'data/data_exp1.npy'
 
 # check if data already in folder, then just load, otherwise process the raw data
 if os.path.isfile(fname):
@@ -96,9 +81,9 @@ else:
 
 # %% fit the model from Wilson et at '14 to choices
 if experiment2:
-    fname = 'parameters_choice_exp2.npz'
+    fname = 'parameter_fits/parameters_choice_exp2.npz'
 else:
-    fname = 'parameters_choice_exp1.npz'
+    fname = 'parameter_fits/parameters_choice_exp1.npz'
 
 if os.path.isfile(fname):
     data = np.load(fname)
@@ -124,9 +109,9 @@ else:
 
 # %% fit the same to confidence, but with bounds
 if experiment2:
-    fname = 'parameters_confidence_with_bounds_exp2.npz'
+    fname = 'parameter_fits/parameters_confidence_with_bounds_exp2.npz'
 else:
-    fname = 'parameters_confidence_with_bounds_exp1.npz'
+    fname = 'parameter_fits/parameters_confidence_with_bounds_exp1.npz'
 
 if os.path.isfile(fname):
     data = np.load(fname)
@@ -156,9 +141,9 @@ else:
 # %% Plot model parameters
 # choice
 if experiment2:
-    fname = 'parameters_choice_exp2.npz'
+    fname = 'parameter_fits/parameters_choice_exp2.npz'
 else:
-    fname = 'parameters_choice_exp1.npz'
+    fname = 'parameter_fits/parameters_choice_exp1.npz'
 if os.path.isfile(fname):
     data = np.load(fname)
     all_params_choice_H5 = data['all_params_choice_H5']
@@ -166,9 +151,9 @@ if os.path.isfile(fname):
 
 # confidence
 if experiment2:
-    fname = 'parameters_confidence_with_bounds_exp2.npz'
+    fname = 'parameter_fits/parameters_confidence_with_bounds_exp2.npz'
 else:
-    fname = 'parameters_confidence_with_bounds_exp1.npz'
+    fname = 'parameter_fits/parameters_confidence_with_bounds_exp1.npz'
 if os.path.isfile(fname):
     data = np.load(fname)
     all_params_immed_H10_with_bounds = data['immed_H10']
@@ -338,18 +323,18 @@ plt.tight_layout()
 # first compute the needed variables
 # choose a parameter set to use - choice
 if experiment2:
-    fname = 'parameters_choice_exp2.npz'
+    fname = 'parameter_fits/parameters_choice_exp2.npz'
 else:
-    fname = 'parameters_choice_exp1.npz'
+    fname = 'parameter_fits/parameters_choice_exp1.npz'
 if os.path.isfile(fname):
     data = np.load(fname)
     all_params_choice_H5 = data['all_params_choice_H5']
     all_params_choice_H10 = data['all_params_choice_H10']
 # confidence with bounds
 if experiment2:
-    fname_lapse = 'parameters_confidence_with_bounds_exp2.npz'
+    fname_lapse = 'parameter_fits/parameters_confidence_with_bounds_exp2.npz'
 else:
-    fname_lapse = 'parameters_confidence_with_bounds_exp1.npz'
+    fname_lapse = 'parameter_fits/parameters_confidence_with_bounds_exp1.npz'
 
 if os.path.isfile(fname_lapse):
     data = np.load(fname_lapse)
@@ -632,9 +617,9 @@ for experiment2 in range(2):
 # experiment2 = 1 # if 0 - exp1, full confidence scale, else - exp2, 50 to 100
 
     if experiment2:
-        fname = 'data_exp2.npy'
+        fname = 'data/data_exp2.npy'
     else:
-        fname = 'data_exp1.npy'
+        fname = 'data/data_exp1.npy'
         
     # check if data already in folder, then just load, otherwise process 
     if os.path.isfile(fname):
@@ -689,5 +674,6 @@ plt.xlabel('confidence (immediate reward)',fontsize = 12)
 plt.ylabel('choosing higher mean, %',fontsize = 12)
 plt.legend()
 plt.gca().spines[['right', 'top']].set_visible(False)
+plt.show()
 # plt.tight_layout()
 # plt.savefig('calibration.pdf', bbox_inches="tight", dpi=500)
