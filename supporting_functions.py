@@ -1,9 +1,15 @@
+import os.path
+import shutil
+import zipfile
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.special import expit
 from scipy.optimize import brute
 default_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+RAW_DATA_DIR = "raw_data"
+RAW_DATA_ZIP = "data.zip"
+DATA_DIR = "data"
 
 def get_sub_IDs(experiment2):
     
@@ -303,13 +309,84 @@ def get_sub_IDs(experiment2):
     return all_sub_IDs
 
 def load_data(id):
-    data = pd.read_csv(f'data/session-{id}.csv')
+    data = pd.read_csv(f'{RAW_DATA_DIR}/{DATA_DIR}/session-{id}.csv')
     return data
 
 def clean_data(data):
     data = data.loc[(data['trial_type'] == 'horizons-trial')
                     & (data['phase'] != 'practice')]
     return data
+
+
+def load_raw_data(experiment2, fname):
+    print(f"Processing data for experiment {'2' if experiment2 else '1'}")
+    # get data files
+    all_sub_IDs = get_sub_IDs(experiment2)
+
+    if not os.path.isdir(DATA_DIR):
+        os.mkdir(DATA_DIR)
+    if not os.path.isdir(RAW_DATA_DIR):
+        os.mkdir(RAW_DATA_DIR)
+        with zipfile.ZipFile(RAW_DATA_ZIP) as zf:
+            zf.extractall(RAW_DATA_DIR)
+
+    # show subjects' comments at the end of the experiment
+    if False:
+        # 'explicit' subjects in exp2: 1, 9?, 19, 56!, 71, 84?, 88?
+        for sub, sub_ID in enumerate(all_sub_IDs):
+            data = load_data(sub_ID)
+            print('--' + str(sub) + '--')
+            show_comments(data)
+
+    # load the data and filter subjects that didn't perform the task
+    # look at performance in the obvious - horizon 5, equal information
+    # performance is the rate of choosing the higher mean option
+    # also remove the subjects that didn't properly use the confidence scale
+    all_variables = []
+    chosen_higher_mean = np.zeros((len(all_sub_IDs), 1))
+    for sub, sub_ID in enumerate(all_sub_IDs):
+        print(sub)
+        data = load_data(sub_ID)
+        data = clean_data(data)
+        variables = extract_variables(data)
+        all_variables.append(variables)
+        chosen_higher_mean[sub] = get_choosing_higher_mean_rate(
+            select_based_on_info(variables, info=0, horizon=5))
+
+    # filter by performance
+    good_subs = chosen_higher_mean > .65
+    all_sub_IDs = [ID for i, ID in enumerate(all_sub_IDs) if good_subs[i]]
+    all_variables = [variables for i, variables in enumerate(
+        all_variables) if good_subs[i]]
+   
+    # filter by removing the ones who didn't use one of the confidence dimensions
+    immed = np.zeros(len(all_variables))
+    total = np.zeros(len(all_variables))
+    for sub, V in enumerate(all_variables):
+        immed[sub] = np.std(V['all_confid'][V['all_horizon'] == 10])
+        total[sub] = np.std(V['all_confid_total'][V['all_horizon'] == 10])
+    sd_cutoff = 5
+    bad_conf_list = np.where(np.logical_or(
+        immed < sd_cutoff, total < sd_cutoff))[0]
+    bad_conf_ind = np.ones(len(immed), dtype=bool)
+    bad_conf_ind[bad_conf_list] = False
+    all_variables = [variables for i, variables in enumerate(
+        all_variables) if i not in bad_conf_list]
+    # check the number of subjects, see if balanced by 
+    # the immediate/total x/y confidence scale orientation
+    print([V['orientation'][0] for V in all_variables])
+    sub_ind = [V['orientation'][0] for V in all_variables]
+    print(np.sum(sub_ind)/len(sub_ind))
+    print(np.sum(np.array(sub_ind) == 1))
+    print(np.sum(np.array(sub_ind) == 0))
+
+    # save processed data in a numpy file
+    np.save(fname, all_variables)
+    if os.path.isdir(RAW_DATA_DIR):
+        shutil.rmtree(RAW_DATA_DIR)
+
+    return all_variables
+
 
 def show_comments(data):
     # data.loc[(data['trial_type'] == 'survey-html-form')]['response']
@@ -370,12 +447,19 @@ def extract_variables(data):
                                              1].str.split(',', expand=True).shape[1]
         all_turn_choices = np.zeros(n_choices-4)
         for tt, turn in enumerate(range(4, n_choices)):
-            selected = data['key_presses'].iloc[trial:trial+1].str.split(',', expand=True)[
-                turn].str.replace(r']', '', regex=True).str.replace(r'[', '', regex=True).str.replace(r'"', '', regex=True)
+            selected = data['key_presses']\
+                .iloc[trial:trial+1]\
+                .str.split(',', expand=True)[turn]\
+                .str.replace(r']', '')\
+                .str.replace(r'[', '')\
+                .str.replace(r'"', '', regex=True)
             if selected.values[0] == 'arrowleft':
                 choice = 0
             elif selected.values[0] == 'arrowright':
                 choice = 1
+            else:
+                print(selected.values[0])
+                exit(1)
             all_turn_choices[tt] = choice
 
         higher_mean = np.argmax([np.squeeze(
@@ -384,8 +468,11 @@ def extract_variables(data):
             all_turn_choices == higher_mean)/len(all_turn_choices)
         variables['higher_chosen_rate'][trial] = higher_chosen_rate
 
-        selected = data['key_presses'].iloc[trial:trial+1].str.split(',', expand=True)[
-            4].str.replace(r']', '', regex=True).str.replace(r'[', '', regex=True).str.replace(r'"', '', regex=True)
+        selected = data['key_presses'].iloc[trial:trial+1]\
+            .str.split(',', expand=True)[4]\
+            .str.replace(r']', '')\
+            .str.replace(r'[', '')\
+            .str.replace(r'"', '', regex=True)
         if selected.values[0] == 'arrowleft':
             choice = 0
         elif selected.values[0] == 'arrowright':
@@ -423,9 +510,12 @@ def extract_variables(data):
             confidence_RT = np.squeeze(data['confidence_rt'].iloc[trial:trial+1].str.extractall('(\d+)').unstack().astype(int).to_numpy())
             variables['all_confidence_RT'][trial] = confidence_RT
 
-        if int(data['horizon'].iloc[trial:trial+1]) == 10:
-            selected_next = data['key_presses'].iloc[trial:trial+1].str.split(',', expand=True)[
-                5].str.replace(r']', '', regex=True).str.replace(r'[', '', regex=True).str.replace(r'"', '', regex=True)
+        if int(data['horizon'].iloc[trial:trial+1].iloc[0]) == 10:
+            selected_next = data['key_presses'].iloc[trial:trial+1]\
+                .str.split(',', expand=True)[5]\
+                .str.replace(r']', '')\
+                .str.replace(r'[', '')\
+                .str.replace(r'"', '', regex=True)
             if selected_next.values[0] == 'arrowleft':
                 choice_next = 0
             elif selected_next.values[0] == 'arrowright':
@@ -441,11 +531,11 @@ def extract_variables(data):
         variables['all_cnfind'][trial] = np.squeeze(
             data['confidence_immediate_overall'].iloc[trial:trial+1].astype(int).to_numpy())
         variables['all_horizon'][trial] = int(
-            data['horizon'].iloc[trial:trial+1])
+            data['horizon'].iloc[trial:trial+1].iloc[0])
         variables['all_info_condition'][trial] = int(
-            data['r_info'].iloc[trial:trial+1])
+            data['r_info'].iloc[trial:trial+1].iloc[0])
 
-        if int(data['r_info'].iloc[trial:trial+1]) == 1:  # unequal
+        if int(data['r_info'].iloc[trial:trial+1].iloc[0]) == 1:  # unequal
             if choice == 1:
                 variables['all_sd_chosen'][trial] = np.std(
                     first_four_L[forced_choices == 1])
