@@ -22,7 +22,8 @@ else:
 if os.path.isfile(fname):
     all_variables = np.load(fname)
 else:
-    all_variables = load_raw_data(experiment2, fname)
+    generate_data_files()
+    all_variables = np.load(fname)
 
 # %% fit the model from Wilson et at '14 to choices
 if experiment2:

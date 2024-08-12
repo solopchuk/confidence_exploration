@@ -318,11 +318,7 @@ def clean_data(data):
     return data
 
 
-def load_raw_data(experiment2, fname):
-    print(f"Processing data for experiment {'2' if experiment2 else '1'}")
-    # get data files
-    all_sub_IDs = get_sub_IDs(experiment2)
-
+def generate_data_files():
     if not os.path.isdir(DATA_DIR):
         os.mkdir(DATA_DIR)
     if not os.path.isdir(RAW_DATA_DIR):
@@ -330,62 +326,67 @@ def load_raw_data(experiment2, fname):
         with zipfile.ZipFile(RAW_DATA_ZIP) as zf:
             zf.extractall(RAW_DATA_DIR)
 
-    # show subjects' comments at the end of the experiment
-    if False:
-        # 'explicit' subjects in exp2: 1, 9?, 19, 56!, 71, 84?, 88?
+    for experiment2, fname in enumerate(['data/data_exp1.npy',
+                                         'data/data_exp2.npy']):
+        print(f"Processing data for experiment {'2' if experiment2 else '1'}")
+        # get data files
+        all_sub_IDs = get_sub_IDs(experiment2)
+
+        # show subjects' comments at the end of the experiment
+        if False:
+            # 'explicit' subjects in exp2: 1, 9?, 19, 56!, 71, 84?, 88?
+            for sub, sub_ID in enumerate(all_sub_IDs):
+                data = load_data(sub_ID)
+                print('--' + str(sub) + '--')
+                show_comments(data)
+
+        # load the data and filter subjects that didn't perform the task
+        # look at performance in the obvious - horizon 5, equal information
+        # performance is the rate of choosing the higher mean option
+        # also remove the subjects that didn't properly use the confidence scale
+        all_variables = []
+        chosen_higher_mean = np.zeros((len(all_sub_IDs), 1))
         for sub, sub_ID in enumerate(all_sub_IDs):
+            print(sub)
             data = load_data(sub_ID)
-            print('--' + str(sub) + '--')
-            show_comments(data)
+            data = clean_data(data)
+            variables = extract_variables(data)
+            all_variables.append(variables)
+            chosen_higher_mean[sub] = get_choosing_higher_mean_rate(
+                select_based_on_info(variables, info=0, horizon=5))
 
-    # load the data and filter subjects that didn't perform the task
-    # look at performance in the obvious - horizon 5, equal information
-    # performance is the rate of choosing the higher mean option
-    # also remove the subjects that didn't properly use the confidence scale
-    all_variables = []
-    chosen_higher_mean = np.zeros((len(all_sub_IDs), 1))
-    for sub, sub_ID in enumerate(all_sub_IDs):
-        print(sub)
-        data = load_data(sub_ID)
-        data = clean_data(data)
-        variables = extract_variables(data)
-        all_variables.append(variables)
-        chosen_higher_mean[sub] = get_choosing_higher_mean_rate(
-            select_based_on_info(variables, info=0, horizon=5))
+        # filter by performance
+        good_subs = chosen_higher_mean > .65
+        all_sub_IDs = [ID for i, ID in enumerate(all_sub_IDs) if good_subs[i]]
+        all_variables = [variables for i, variables in enumerate(
+            all_variables) if good_subs[i]]
 
-    # filter by performance
-    good_subs = chosen_higher_mean > .65
-    all_sub_IDs = [ID for i, ID in enumerate(all_sub_IDs) if good_subs[i]]
-    all_variables = [variables for i, variables in enumerate(
-        all_variables) if good_subs[i]]
-   
-    # filter by removing the ones who didn't use one of the confidence dimensions
-    immed = np.zeros(len(all_variables))
-    total = np.zeros(len(all_variables))
-    for sub, V in enumerate(all_variables):
-        immed[sub] = np.std(V['all_confid'][V['all_horizon'] == 10])
-        total[sub] = np.std(V['all_confid_total'][V['all_horizon'] == 10])
-    sd_cutoff = 5
-    bad_conf_list = np.where(np.logical_or(
-        immed < sd_cutoff, total < sd_cutoff))[0]
-    bad_conf_ind = np.ones(len(immed), dtype=bool)
-    bad_conf_ind[bad_conf_list] = False
-    all_variables = [variables for i, variables in enumerate(
-        all_variables) if i not in bad_conf_list]
-    # check the number of subjects, see if balanced by 
-    # the immediate/total x/y confidence scale orientation
-    print([V['orientation'][0] for V in all_variables])
-    sub_ind = [V['orientation'][0] for V in all_variables]
-    print(np.sum(sub_ind)/len(sub_ind))
-    print(np.sum(np.array(sub_ind) == 1))
-    print(np.sum(np.array(sub_ind) == 0))
+        # filter by removing the ones who didn't use one of the confidence dimensions
+        immed = np.zeros(len(all_variables))
+        total = np.zeros(len(all_variables))
+        for sub, V in enumerate(all_variables):
+            immed[sub] = np.std(V['all_confid'][V['all_horizon'] == 10])
+            total[sub] = np.std(V['all_confid_total'][V['all_horizon'] == 10])
+        sd_cutoff = 5
+        bad_conf_list = np.where(np.logical_or(
+            immed < sd_cutoff, total < sd_cutoff))[0]
+        bad_conf_ind = np.ones(len(immed), dtype=bool)
+        bad_conf_ind[bad_conf_list] = False
+        all_variables = [variables for i, variables in enumerate(
+            all_variables) if i not in bad_conf_list]
+        # check the number of subjects, see if balanced by 
+        # the immediate/total x/y confidence scale orientation
+        print([V['orientation'][0] for V in all_variables])
+        sub_ind = [V['orientation'][0] for V in all_variables]
+        print(np.sum(sub_ind)/len(sub_ind))
+        print(np.sum(np.array(sub_ind) == 1))
+        print(np.sum(np.array(sub_ind) == 0))
 
-    # save processed data in a numpy file
-    np.save(fname, all_variables)
+        # save processed data in a numpy file
+        np.save(fname, all_variables)
+
     if os.path.isdir(RAW_DATA_DIR):
         shutil.rmtree(RAW_DATA_DIR)
-
-    return all_variables
 
 
 def show_comments(data):
