@@ -9,7 +9,7 @@ from supporting_functions import *
 default_colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
 
 # %% data loading
-experiment2 = 0  # if 0 - exp1, full confidence scale, else - exp2, 0 to 50
+experiment2 = 0  # if 0 - exp1, full confidence scale, else - exp2, 50 to 100
 
 if experiment2:
     fname = "data/data_exp2.npy"
