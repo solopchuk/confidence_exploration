@@ -1,7 +1,6 @@
-# `Multifaceted confidence in exploratory choice.` *(preprint)*
-## *Solopchuk O., Dayan P.*, 2024
+Code for the paper: Solopchuk O., Dayan P., Multifaceted confidence in exploratory choice, PLOS ONE, 2025
 
-The code reproduces all analysis and figures of the [preprint on biorxiv](https://www.biorxiv.org/content/10.1101/2024.05.23.595493v1)
+https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0304923
 
 ## Abstract
 
